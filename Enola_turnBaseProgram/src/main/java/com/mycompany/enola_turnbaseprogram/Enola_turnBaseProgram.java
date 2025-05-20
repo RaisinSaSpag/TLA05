@@ -7,146 +7,110 @@ package com.mycompany.enola_turnbaseprogram;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.Stack;
-import java.util.InputMismatchException;
 public class Enola_turnBaseProgram {
-    
-    private Stack<Integer> lastBotHP = new Stack<>();
-    private Scanner scanner = new Scanner(System.in);
-    private Random random = new Random();
 
-    private int playerHP = 100;
-    private int botHP = 100;
-    private int playerMinDmg = 5;
-    private int playerMaxDmg = 10;
-    private int botMinDmg = 2;
-    private int botMaxDmg = 5;
-    private int turnCount = 1;
-    private boolean isBotStunned = false;
-    
     public static void main(String[] args) {
-        Enola_turnBaseProgram game = new Enola_turnBaseProgram();
-        game.startGame();
-    }
+       Scanner scanner = new Scanner(System.in);
+        Random random = new Random();
 
-    public void startGame() {
-        System.out.println("=== Turn Based RPG ===");
-        System.out.println("Player and Bot start with 100 HP");
-        System.out.println("Bot's Passive: 25% chance to avoid damage and restore HP\n");
+        Stack<Integer> lastHP = new Stack<>();
+
+        int playerHP = 100;
+        int playerMinDmg = 5;
+        int playerMaxDmg = 10;
+
+        int botHP = 100;
+        int botMinDmg = 5;
+        int botMaxDmg = 10;
+
+        boolean botStunned = false;
+
+        int turnCount = 1;
+
+        System.out.println("=== Turn Based Game ===");
+        System.out.println("The Bot and The Player will start with 100HP");
+        System.out.println("Bot's Passive: 25% chance to completely avoid damage and restore previous HP");
+        System.out.println("Player Skill: Stun (25% chance to skip bot's next turn)\n");
 
         while (playerHP > 0 && botHP > 0) {
-            printTurnStatus();
-            
-            if (isPlayerTurn()) {
-                handlePlayerTurn();
+            System.out.println("------ Turn " + turnCount + " ------");
+            System.out.println("Your HP: " + playerHP + " | Bot HP: " + botHP);
+
+            if (oddOrEven(turnCount)) {
+                // Bot's turn
+                if (botStunned) {
+                    System.out.println("Bot is stunned and skips its turn!");
+                    botStunned = false;
+                } else {
+                    int botDmg = random.nextInt(botMaxDmg - botMinDmg + 1) + botMinDmg;
+                    playerHP -= botDmg;
+                    System.out.println("Bot attacks you for " + botDmg + " damage!");
+                }
             } else {
-                handleBotTurn();
+                // Player's turn
+                System.out.println("Your turn! Choose an action:");
+                System.out.println("1. Attack");
+                System.out.println("2. Stun");
+                System.out.println("3. Skip turn");
+                System.out.println("4. Exit game");
+
+                int choice = scanner.nextInt();
+                if (choice == 1) {
+                    int playerDmg = random.nextInt(playerMaxDmg - playerMinDmg + 1) + playerMinDmg;
+
+                    lastHP.push(botHP);  // Save current HP before attacking
+
+                    int chance = random.nextInt(100); // 0 to 99
+                    if (chance < 25) {
+                        int previousHP = lastHP.pop();
+                        System.out.println("\n====================================");
+                        System.out.println("|| BOT'S PASSIVE ABILITY ACTIVATED ||");
+                        System.out.println("====================================");
+                        System.out.println("The bot shimmered with energy as it avoided your attack!");
+                        System.out.println("HP restored from " + botHP + " to " + previousHP + "!");
+                        System.out.println("Your " + playerDmg + " damage was completely nullified!");
+                        System.out.println("====================================\n");
+                        botHP = previousHP;
+                    } else {
+                        botHP -= playerDmg;
+                        lastHP.pop(); // Discard the saved HP since it wasn't used
+                        System.out.println("You attack the bot for " + playerDmg + " damage!");
+                    }
+
+                } else if (choice == 2) {
+                    int stunChance = random.nextInt(100);
+                    if (stunChance < 25) {
+                        botStunned = true;
+                        System.out.println("You successfully stunned the bot! It will skip its next turn.");
+                    } else {
+                        System.out.println("Stun failed! Bot resists the effect.");
+                    }
+                } else if (choice == 3) {
+                    System.out.println("You chose to skip your turn.");
+                } else if (choice == 4) {
+                    System.out.println("You exited the game.");
+                    return;
+                } else {
+                    System.out.println("Invalid choice! You lose your turn.");
+                }
             }
 
             turnCount++;
             System.out.println();
         }
 
-        printGameResult();
-    }
-
-    private void printTurnStatus() {
-        System.out.println("------ Turn " + turnCount + " ------");
-        System.out.println("Player HP: " + playerHP);
-        System.out.println("Bot HP: " + botHP);
-    }
-
-    private boolean isPlayerTurn() {
-        return turnCount % 2 != 0; // Player goes on odd turns
-    }
-
-    private void handlePlayerTurn() {
-        System.out.println("\nYour turn! Choose an action:");
-        System.out.println("1. Attack");
-        System.out.println("2. Stun (skip bot's next turn)");
-        System.out.println("3. Skip turn");
-        System.out.print("Enter choice: ");
-
-        int choice = getValidChoice(1, 3);
-
-        switch (choice) {
-            case 1 -> attackBot();
-            case 2 -> stunBot();
-            case 3 -> skipTurn();
-        }
-    }
-
-    private void handleBotTurn() {
-        if (isBotStunned) {
-            System.out.println("The bot is stunned and skips its turn!");
-            isBotStunned = false;
-            return;
-        }
-
-        lastBotHP.push(botHP); // Save HP before potential restoration
-
-        // 25% chance to activate passive
-        if (random.nextInt(4) == 0) {
-            activateBotPassive();
-        } else {
-            attackPlayer();
-        }
-    }
-
-    private void attackBot() {
-        int damage = random.nextInt(playerMaxDmg - playerMinDmg + 1) + playerMinDmg;
-        botHP = Math.max(0, botHP - damage);
-        System.out.println("You attack the bot for " + damage + " damage!");
-    }
-
-    private void stunBot() {
-        isBotStunned = true;
-        System.out.println("You stun the bot! It will skip its next turn.");
-    }
-
-    private void skipTurn() {
-        System.out.println("You choose to skip your turn.");
-    }
-
-    private void attackPlayer() {
-        int damage = random.nextInt(botMaxDmg - botMinDmg + 1) + botMinDmg;
-        playerHP = Math.max(0, playerHP - damage);
-        System.out.println("The bot attacks you for " + damage + " damage!");
-    }
-
-    private void activateBotPassive() {
-        int previousHP = lastBotHP.pop();
-        System.out.println("\n=== BOT'S PASSIVE ACTIVATED ===");
-        System.out.println("The bot avoided your attack!");
-        System.out.println("HP restored from " + botHP + " to " + previousHP);
-        botHP = previousHP;
-    }
-
-    private int getValidChoice(int min, int max) {
-        while (true) {
-            try {
-                int choice = scanner.nextInt();
-                scanner.nextLine(); // Clear buffer
-                if (choice >= min && choice <= max) {
-                    return choice;
-                }
-                System.out.print("Invalid choice. Enter " + min + "-" + max + ": ");
-            } catch (InputMismatchException e) {
-                System.out.print("Please enter a number: ");
-                scanner.nextLine(); // Clear invalid input
-            }
-        }
-    }
-
-    private void printGameResult() {
+        // Game over message
         if (playerHP <= 0 && botHP <= 0) {
             System.out.println("It's a draw!");
         } else if (playerHP <= 0) {
-            System.out.println("You lost! The bot wins!");
+            System.out.println("You lost! Bot wins!");
         } else {
-            System.out.println("You won! The bot is defeated!");
+            System.out.println("You won! Bot is defeated!");
         }
     }
+
+    // Returns true if turn is even (bot's turn)
+    static boolean oddOrEven(int i) {
+        return i % 2 == 0;
+    }
 }
-
-    
-
